@@ -1,60 +1,43 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/python
+// For format details, see https://aka.ms/devcontainer.json.
 {
-	"name": "Python-Template-Repo",
-	// Build from a Dockerfile so OS packages are installed during image creation.
+	"name": "Azure-Function-Apps",
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
-	// could also be "image": "ghcr.io/astral-sh/uv:latest" if you want to use the uv image directly,
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
+	// More info: https://containers.dev/features.
 	"features": {
-        "ghcr.io/devcontainers-extra/features/uv:1": {
-			"version": "0.12.5"
-		}
+		"ghcr.io/devcontainers-extra/features/uv:1": {
+			"version": "0.13.9"
+		},
+		// Node is used by Core Tools and to run Azurite (`npx azurite`).
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {},
+		"ghcr.io/devcontainers/features/azure-cli:1": {}
 	},
 
-	// Configure tool-specific properties.
 	"customizations": {
 		"codespaces": {
 			"openFiles": [
-				"docs/CONTRIBUTING.md"
+				"README.md"
 			]
 		},
-		// Configure properties specific to VS Code.
+		// Workspace settings, tasks and launch configs come from .vscode/.
 		"vscode": {
 			"extensions": [
 				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-python.debugpy",
 				"charliermarsh.ruff",
-				"usernamehw.errorlens"
-			],
-			"settings": {
-				"files.insertFinalNewline": true,
-				"editor.tabSize": 4,
-				"editor.wordWrapColumn": 130,
-				"editor.rulers": [
-					120
-				]
-			}
+				"ms-azuretools.vscode-azurefunctions",
+				"azurite.azurite",
+				"tamasfe.even-better-toml"
+			]
 		}
 	},
-	
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [9000],
 
-	// Use 'portsAttributes' to set default properties for specific forwarded ports. 
-	// More info: https://containers.dev/implementors/json_reference/#port-attributes
-	// "portsAttributes": {
-	// 	"9000": {
-	// 		"label": "Hello Remote World",
-	// 		"onAutoForward": "notify"
-	// 	}
-	// },
-	
-	// Use 'postCreateCommand' to run commands after the container is created.
+	// Function App hosts (api-app, worker-app) and Azurite (blob, queue, table).
+	"forwardPorts": [7071, 7072, 10000, 10001, 10002],
+
 	"postCreateCommand": "./.devcontainer/postCreateCommand.sh"
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
 }
