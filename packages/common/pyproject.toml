@@ -1,0 +1,10 @@
+[project]
+    name = "common"
+    version = "0.1.0"
+    description = "Shared code used by every Function App in this workspace"
+    requires-python = ">=3.14"
+    dependencies = []
+
+[build-system]
+    requires = ["uv_build>=0.12.5,<0.14"]
+    build-backend = "uv_build"

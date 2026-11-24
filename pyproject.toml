@@ -1,155 +1,182 @@
+# ---------------------------------------------------------------------------
+# Workspace root.
+#
+# This project is a *virtual* root: it is never built or deployed itself. It ties
+# the Function Apps in `apps/` and the shared libraries in `packages/` together
+# into one uv workspace with a single lock file and a single `.venv`, so that
+# VSCode (Pylance), pytest, ruff and mypy see every package at once.
+# ---------------------------------------------------------------------------
 [project]
-    name = "python_template_repo"
+    name = "azure-functions-workspace"
     version = "0.1.0"
-    description = "Python Template Repo"
+    description = "Template repo with multiple Azure Function Apps (Python v2 programming model) in one uv workspace"
     authors = [
         {name = "J. van Nijnatten"},
     ]
     readme = "README.md"
     license = "MIT"
-    license-files = [
-        "LICENSE",
-    ]
     requires-python = ">=3.14"
     classifiers = [
-        "Operating System :: OS Independent",
         "Private :: Do Not Upload",
-        "Programming Language :: Python :: 3.14",
     ]
+    # Depending on every workspace member means a plain `uv sync` installs all of them
+    # (editable) into the root `.venv`.
     dependencies = [
-        "pandas>=2.3.3",
-        "pyyaml>=6.0.3",
-        "rich>=14.2.0",
-        "textual>=6.6.0",
-        "typer>=0.20.0",
+        "api-app",
+        "common",
+        "worker-app",
     ]
 
 [dependency-groups]
     dev = [
-        "pre-commit==4.5.0",
-        "specify-cli>=1.0.0",
+        "debugpy>=1.8.22",
+        "pre-commit>=4.7.0",
         {include-group = "lint"},
         {include-group = "test"},
     ]
     lint = [
-        "ruff==0.14.6",
-        "mypy==1.18.2",
-        "bandit==1.9.1",
-        "radon>=6.0.1",
+        "pyright[nodejs]>=1.1.414",
+        "ruff>=0.17.6",
     ]
     test = [
-        "pytest==9.0.1",
-        "pytest-cov>=7.0.0",
-        "pytest-mock==3.15.1",
+        "pytest>=9.2.0",
+        "pytest-cov>=7.1.0",
+        "pytest-mock>=3.17.0",
     ]
-
-[project.scripts]
-    python-template-repo = "python_template_repo:main"
-
-[build-system]
-    requires = ["uv_build>=0.12.5,<0.13"]
-    build-backend = "uv_build"
 
 [tool.uv]
-    package = true
-    required-version = "0.12.5"
+    package = false
+    required-version = ">=0.12.5"
 
+[tool.uv.workspace]
+    members = [
+        "apps/*",
+        "packages/*",
+    ]
+
+[tool.uv.sources]
+    api-app = {workspace = true}
+    common = {workspace = true}
+    worker-app = {workspace = true}
+
+
+# ---------------------------------------------------------------------------
+# Ruff (linting + formatting). Members inherit this config.
+# ---------------------------------------------------------------------------
 [tool.ruff]
-    lint.select = [
-        "A",   # flake8-builtins
-        "ANN", # flake8-annotations
-        "B",   # flake8-bugbear
-        "BLE", # flake8-blind-except
-        "C",   # flake8-comprehensions
-        "COM", # flake8-commas
-        "C90", # mccabe
-        "E",   # pycodestyle errors
-        "F",   # pyflakes
-        "G",   # flake8-logging-format
-        "I",   # isort
-        "PD",  # pandas-vet
-        "RUF", # ruff-specific rules
-        "S5",  # flake8-bandit
-        "T10", # flake&-debugger
-        "T20", # flake8-print
-        "W",   # pycodestyle warnings
+    line-length = 120
+    target-version = "py314"
+    extend-exclude = [
+        "**/.python_packages",
     ]
 
-    lint.ignore = [
-        "W191",   # tab-indentation,
-        "E111",   # indentation-with-invalid-multiple
-        "E114",   # indentation-with-invalid-multiple-comment
-        "E117",   # over-indented
-        "D206",   # indent-with-spaces
-        "D300",   # triple-single-quotes
-        "Q000",   # bad-quotes-inline-string
-        "Q001",   # bad-quotes-multiline-string
-        "Q002",   # bad-quotes-docstring
-        "Q003",   # avoidable-escaped-quote
-        "COM812", # missing-trailing-comma
-        "COM819", # prohibited-trailing-comma
-        "ISC001", # single-line-implicit-string-concatenation
-        "ISC002", # multi-line-implicit-string-concatenation
-        "ANN204", # missing-return-type-special-method
-        "S105",   # hardcoded-password-string
-        "E501",   # line-too-long
+[tool.ruff.lint]
+    select = [
+        "A",    # flake8-builtins
+        "ANN",  # flake8-annotations
+        "B",    # flake8-bugbear
+        "BLE",  # flake8-blind-except
+        "C4",   # flake8-comprehensions
+        "C90",  # mccabe complexity
+        "E",    # pycodestyle errors
+        "F",    # pyflakes
+        "FA",   # flake8-future-annotations
+        "G",    # flake8-logging-format
+        "I",    # isort
+        "LOG",  # flake8-logging
+        "PERF", # perflint
+        "PT",   # flake8-pytest-style
+        "PTH",  # flake8-use-pathlib
+        "RUF",  # ruff-specific rules
+        "S",    # flake8-bandit (security)
+        "SIM",  # flake8-simplify
+        "T10",  # flake8-debugger
+        "T20",  # flake8-print
+        "UP",   # pyupgrade
+        "W",    # pycodestyle warnings
     ]
-
-    exclude = [
-        "tests/data"
+    ignore = [
+        "COM812", # conflicts with the formatter
+        "E501",   # line length is handled by the formatter
     ]
-
-
-[tool.ruff.format]
-    quote-style = "double"
-    indent-style = "space"
-    line-ending = "auto"
-    docstring-code-format = true
-    docstring-code-line-length = 50
-
 
 [tool.ruff.lint.per-file-ignores]
-    "tests/**/*.py" = [
-        "S101", # flake8-bandit: assert
+    "**/tests/**/*.py" = [
+        "S101", # assert is how pytest works
     ]
-    "__init__.py" = [
-        "F401",
-    ]
-    "notebook_run unit_tests.py" = [
-        "F821",
-        "E402",
-        "S101"
+    "scripts/**/*.py" = [
+        "S603", # subprocess calls with trusted, fixed arguments
+        "T201", # scripts may print
     ]
 
+[tool.ruff.lint.isort]
+    known-first-party = ["api_app", "common", "worker_app"]
 
-[tool.mypy]
+[tool.ruff.format]
+    docstring-code-format = true
+
+
+# ---------------------------------------------------------------------------
+# Pyright. This is the same engine as Pylance, and Pylance reads this section,
+# so VSCode shows exactly what `uv run pyright` (pre-commit/CI) enforces.
+# `extraPaths` lets imports of workspace packages resolve to their sources.
+# ---------------------------------------------------------------------------
+[tool.pyright]
+    pythonVersion = "3.14"
+    typeCheckingMode = "strict"
+    venvPath = "."
+    venv = ".venv"
+    include = [
+        "apps",
+        "packages",
+        "scripts",
+    ]
     exclude = [
-        "tests",
+        "**/.python_packages",
+        "**/__pycache__",
+        "**/.venv",
+        "build",
+        "dist",
     ]
-    ignore_missing_imports = true
-
-
-[tool.bandit]
-    exclude_dirs = [
-        "tests"
+    extraPaths = [
+        "apps/api-app/src",
+        "apps/worker-app/src",
+        "packages/common/src",
     ]
+    reportMissingModuleSource = "warning"
+    reportUnnecessaryTypeIgnoreComment = "warning"
 
 
-[tool.radon]
-    order = "SCORE"
-    cc_min = "C"
-
-
+# ---------------------------------------------------------------------------
+# pytest. One run (CLI, CI or the VSCode Test Explorer) collects the tests of
+# every app and package. `importlib` mode allows identically named test files
+# in different apps.
+# ---------------------------------------------------------------------------
 [tool.pytest]
+    minversion = "9.0"
     addopts = [
-        "--strict-markers"
+        "--import-mode=importlib",
+        "--strict-markers",
+        "--strict-config",
     ]
     markers = [
-        "configuration",
-        "data",
-        "slow",
-        "user_interface",
+        "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     ]
     testpaths = [
-        "tests"
+        "apps",
+        "packages",
     ]
+
+[tool.coverage.run]
+    branch = true
+    source = [
+        "apps",
+        "packages",
+    ]
+    omit = [
+        "**/tests/**",
+    ]
+
+[tool.coverage.report]
+    show_missing = true
+    skip_covered = true

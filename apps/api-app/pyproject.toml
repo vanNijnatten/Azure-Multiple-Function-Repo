@@ -1,0 +1,16 @@
+[project]
+    name = "api-app"
+    version = "0.1.0"
+    description = "Function App with HTTP-triggered functions"
+    requires-python = ">=3.14"
+    dependencies = [
+        "azure-functions>=2.4.0",
+        "common",
+    ]
+
+[tool.uv.sources]
+    common = {workspace = true}
+
+[build-system]
+    requires = ["uv_build>=0.12.5,<0.14"]
+    build-backend = "uv_build"
