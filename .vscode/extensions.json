@@ -1,14 +1,23 @@
 {
     "recommendations": [
-        "ms-vscode-remote.remote-containers",
+        // Python, Pylance (type hints, go-to-definition) and the debugger
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        // Linting and formatting
         "charliermarsh.ruff",
-        "eamodio.gitlens",
+        // Azure Functions (Core Tools integration, deploy from the editor) and the local storage emulator
+        "ms-azuretools.vscode-azurefunctions",
+        "azurite.azurite",
+        // GitHub
         "github.vscode-github-actions",
         "github.vscode-pull-request-github",
-        "ibm.output-colorizer",
-        "mechatroner.rainbow-csv",
-        "ms-python.python",
-        "oderwat.indent-rainbow",
+        // TOML (pyproject.toml)
+        "tamasfe.even-better-toml",
+        // Dev Containers
+        "ms-vscode-remote.remote-containers",
+        // Nice to have
+        "eamodio.gitlens",
         "usernamehw.errorlens",
-    ]
+    ],
 }

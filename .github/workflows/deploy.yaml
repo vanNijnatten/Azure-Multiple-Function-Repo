@@ -1,0 +1,110 @@
+name: Deploy
+
+# Deploys every Function App whose code (or shared code) changed on main, or the
+# app(s) chosen when run by hand.
+#
+# One-time setup per app (see README, "Deployment"):
+#   - a GitHub Environment named after the app folder, e.g. `api-app`, with the
+#     variables AZURE_FUNCTIONAPP_NAME, AZURE_CLIENT_ID, AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID
+#   - a federated credential (OIDC) on that Entra ID app registration for
+#     `repo:<owner>/<repo>:environment:<app>`
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/**
+      - packages/**
+      - pyproject.toml
+      - uv.lock
+      - .python-version
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Apps to deploy: 'all' or space-separated folder names, e.g. 'api-app worker-app'"
+        required: true
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    name: Select apps to deploy
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.select.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: select
+        env:
+          REQUESTED: ${{ inputs.apps }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          all=$(ls apps/*/function_app.py | cut -d/ -f2)
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ "$REQUESTED" == "all" ]]; then selected="$all"; else selected="$REQUESTED"; fi
+          elif [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            selected="$all"
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+            if grep -qE '^(packages/|pyproject\.toml$|uv\.lock$|\.python-version$)' <<< "$changed"; then
+              selected="$all"   # shared code or dependencies changed: every app is affected
+            else
+              selected=$(grep -oE '^apps/[^/]+' <<< "$changed" | cut -d/ -f2 | sort -u || true)
+            fi
+          fi
+          for app in $selected; do
+            [[ -f "apps/$app/function_app.py" ]] || { echo "::error::Unknown app '$app'"; exit 1; }
+          done
+          json=$(printf '%s\n' $selected | jq -Rnc '[inputs | select(length > 0)]')
+          echo "Deploying: $json" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "apps=$json" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy ${{ matrix.app }}
+    needs: plan
+    if: needs.plan.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    environment: ${{ matrix.app }}
+    permissions:
+      contents: read
+      id-token: write # OIDC login to Azure
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: true
+      - name: Build deployment package
+        run: uv run --locked scripts/package_app.py ${{ matrix.app }}
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+          package: dist/${{ matrix.app }}.zip
+          # The package already contains every dependency (.python_packages), so
+          # Azure must not build it again. For a Flex Consumption plan, also set
+          # `sku: flexconsumption` and `remote-build: false`.
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false

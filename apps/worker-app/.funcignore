@@ -1,0 +1,9 @@
+# Used only by `func azure functionapp publish` from this folder. The CI/CD
+# pipeline deploys the package built by scripts/package_app.py instead.
+.venv
+.vscode
+__pycache__
+local.settings.json
+local.settings.example.json
+pyproject.toml
+tests

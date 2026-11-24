@@ -1,5 +1,47 @@
 {
+    // ---------------------------------------------------------------------------------
+    // Python: uv creates one `.venv` at the workspace root holding every app and
+    // package. The Python extension picks it up automatically; if not, run
+    // "Python: Select Interpreter" and choose ./.venv.
+    //
+    // Type checking (mode, include paths, extraPaths for the workspace packages) is
+    // configured in [tool.pyright] in pyproject.toml. Pylance reads that section, so
+    // the editor and `uv run pyright` in pre-commit/CI always agree.
+    // ---------------------------------------------------------------------------------
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.variableTypes": false,
+    "python.analysis.generateWithTypeAnnotation": true,
+
+    // Tests: one Test Explorer tree for all apps and packages ([tool.pytest] in pyproject.toml).
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [],
+
+    // Ruff formats and organises imports on save.
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit",
+        },
+    },
+
+    // Azure Functions extension. The apps live in apps/<name>; debugging is wired up
+    // in tasks.json/launch.json, so the extension doesn't need to manage a single project.
+    "azureFunctions.projectLanguage": "Python",
+    "azureFunctions.projectLanguageModel": 2,
+    "azureFunctions.projectRuntime": "~4",
+    "azureFunctions.scmDoBuildDuringDeployment": false,
+    "azureFunctions.showProjectWarning": false,
+    "debug.internalConsoleOptions": "neverOpen",
+
+    // Editor
     "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
     "editor.fontFamily": "'FiraCode Nerd Font', Menlo, Monaco, 'Courier New', monospace",
     "editor.fontLigatures": true,
     "editor.rulers": [
@@ -9,13 +51,16 @@
     "editor.wordWrap": "on",
     "editor.wordWrapColumn": 130,
     "git.autofetch": true,
-    "python.analysis.diagnosticMode": "workspace",
-    "python.analysis.generateWithTypeAnnotation": true,
-    "python.analysis.typeCheckingMode": "strict",
     "terminal.integrated.defaultProfile.windows": "Git Bash",
     "files.exclude": {
-        ".venv":true,
-        ".*_cache":true,
-        "**/__pycache__":true,
-    }
+        ".venv": true,
+        ".*_cache": true,
+        "**/__pycache__": true,
+        "**/__azurite_db*__.json": true,
+        "**/__blobstorage__": true,
+        "**/__queuestorage__": true,
+    },
+    "files.associations": {
+        "local.settings*.json": "jsonc",
+    },
 }

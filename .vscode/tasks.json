@@ -1,0 +1,173 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "uv: sync",
+            "detail": "Install/refresh the workspace .venv from uv.lock",
+            "type": "shell",
+            "command": "uv sync",
+            "problemMatcher": []
+        },
+        {
+            "label": "init local settings",
+            "detail": "Create apps/*/local.settings.json from the examples (never overwrites)",
+            "type": "shell",
+            "command": "uv run scripts/init_local_settings.py",
+            "problemMatcher": []
+        },
+        {
+            "label": "prepare local dev",
+            "dependsOn": [
+                "uv: sync",
+                "init local settings"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "func: start api-app",
+            "detail": "Run apps/api-app in the Functions host; debugger listens on port 9091",
+            "type": "shell",
+            "command": "func host start",
+            "options": {
+                "cwd": "${workspaceFolder}/apps/api-app",
+                "env": {
+                    "PATH": "${workspaceFolder}/.venv/bin:${env:PATH}",
+                    "VIRTUAL_ENV": "${workspaceFolder}/.venv",
+                    "languageWorkers__python__defaultExecutablePath": "${workspaceFolder}/.venv/bin/python",
+                    "languageWorkers__python__arguments": "-Xfrozen_modules=off -m debugpy --listen 127.0.0.1:9091"
+                }
+            },
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/apps/api-app",
+                    "env": {
+                        "PATH": "${workspaceFolder}\\.venv\\Scripts;${env:PATH}",
+                        "VIRTUAL_ENV": "${workspaceFolder}/.venv",
+                        "languageWorkers__python__defaultExecutablePath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+                        "languageWorkers__python__arguments": "-Xfrozen_modules=off -m debugpy --listen 127.0.0.1:9091"
+                    }
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "azure-functions",
+                "pattern": {
+                    "regexp": "^\\b\\B$"
+                },
+                "background": {
+                    "activeBegins": true,
+                    "beginsPattern": "^.*(Job host stopped|signaling restart|Azure Functions Core Tools).*$",
+                    "endsPattern": "^.*(Job host started|Host lock lease acquired by instance ID|Worker process started and initialized|Unable to find a version of the Azure Functions runtime).*$"
+                }
+            },
+            "dependsOn": [
+                "prepare local dev"
+            ],
+            "presentation": {
+                "group": "functions",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "func: start worker-app",
+            "detail": "Run apps/worker-app in the Functions host; debugger listens on port 9092",
+            "type": "shell",
+            "command": "func host start",
+            "options": {
+                "cwd": "${workspaceFolder}/apps/worker-app",
+                "env": {
+                    "PATH": "${workspaceFolder}/.venv/bin:${env:PATH}",
+                    "VIRTUAL_ENV": "${workspaceFolder}/.venv",
+                    "languageWorkers__python__defaultExecutablePath": "${workspaceFolder}/.venv/bin/python",
+                    "languageWorkers__python__arguments": "-Xfrozen_modules=off -m debugpy --listen 127.0.0.1:9092"
+                }
+            },
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/apps/worker-app",
+                    "env": {
+                        "PATH": "${workspaceFolder}\\.venv\\Scripts;${env:PATH}",
+                        "VIRTUAL_ENV": "${workspaceFolder}/.venv",
+                        "languageWorkers__python__defaultExecutablePath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+                        "languageWorkers__python__arguments": "-Xfrozen_modules=off -m debugpy --listen 127.0.0.1:9092"
+                    }
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "azure-functions",
+                "pattern": {
+                    "regexp": "^\\b\\B$"
+                },
+                "background": {
+                    "activeBegins": true,
+                    "beginsPattern": "^.*(Job host stopped|signaling restart|Azure Functions Core Tools).*$",
+                    "endsPattern": "^.*(Job host started|Host lock lease acquired by instance ID|Worker process started and initialized|Unable to find a version of the Azure Functions runtime).*$"
+                }
+            },
+            "dependsOn": [
+                "prepare local dev"
+            ],
+            "presentation": {
+                "group": "functions",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "azurite: start",
+            "detail": "Local Storage emulator for queue/timer triggers (alternative: the Azurite extension)",
+            "type": "shell",
+            "command": "npx --yes azurite --silent --skipApiVersionCheck --location .azurite",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "azurite",
+                "pattern": {
+                    "regexp": "^\\b\\B$"
+                },
+                "background": {
+                    "activeBegins": true,
+                    "beginsPattern": "^.*Azurite.*$",
+                    "endsPattern": "^.*successfully listening.*$"
+                }
+            },
+            "presentation": {
+                "group": "functions",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "pytest",
+            "detail": "Run every test with coverage",
+            "type": "shell",
+            "command": "uv run pytest --cov",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "pre-commit: run all",
+            "type": "shell",
+            "command": "uv run pre-commit run --all-files",
+            "problemMatcher": []
+        },
+        {
+            "label": "package: api-app",
+            "detail": "Build dist/api-app.zip",
+            "type": "shell",
+            "command": "uv run scripts/package_app.py api-app",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "package: worker-app",
+            "detail": "Build dist/worker-app.zip",
+            "type": "shell",
+            "command": "uv run scripts/package_app.py worker-app",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
