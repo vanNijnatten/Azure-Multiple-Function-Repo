@@ -1,21 +1,44 @@
-repos:
+# Install once with: uv run pre-commit install
+# Run on everything:  uv run pre-commit run --all-files
+default_install_hook_types: [pre-commit]
 
-  - repo: local
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: check-json
+        exclude: ^\.(vscode|devcontainer)/  # JSON with comments
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+
+  # Keep uv.lock in sync with every pyproject.toml in the workspace.
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.13.9
+    hooks:
+      - id: uv-lock
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.6
     hooks:
       - id: ruff-check
-        name: Run ruff check
-        entry: uv run ruff check --fix
-        language: system
-        types: [python]
-
+        args: [--fix]
       - id: ruff-format
-        name: Run ruff format
-        entry: uv run ruff format
-        language: system
-        types: [python]
 
-      - id: mypy
-        name: Run mypy
-        entry: bash -c "uv run mypy src"
+  # Pyright needs the project's dependencies to type check, so it runs from the
+  # workspace .venv instead of an isolated hook environment.
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run --frozen pyright
         language: system
-        types: [python]
+        types_or: [python, pyi]
+        pass_filenames: false
+        require_serial: true

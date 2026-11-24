@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  UV_LOCKED: "1" # fail if uv.lock is out of date with the pyproject.toml files
+
+jobs:
+  lint:
+    name: Lint & format (pre-commit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: true
+      - run: uv sync
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Run pre-commit (pyright runs in its own job)
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+        env:
+          SKIP: pyright
+
+  typecheck:
+    name: Type check (pyright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: Run pyright
+        run: |
+          uv run pyright --outputjson > pyright.json || status=$?
+          jq -r '.generalDiagnostics[] | "::\(if .severity == "error" then "error" else "warning" end) file=\(.file),line=\(.range.start.line + 1),col=\(.range.start.character + 1),title=pyright \(.rule // "")::\(.message)"' pyright.json
+          jq -r '.summary | "errors: \(.errorCount), warnings: \(.warningCount)"' pyright.json
+          exit ${status:-0}
+
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: Run pytest
+        run: uv run pytest --cov --cov-report=term --cov-report=markdown-append:"$GITHUB_STEP_SUMMARY"
+
+  discover:
+    name: Discover Function Apps
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.apps.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: apps
+        # Every folder in apps/ with a function_app.py is a Function App.
+        run: echo "apps=$(ls apps/*/function_app.py | cut -d/ -f2 | jq -Rnc '[inputs]')" >> "$GITHUB_OUTPUT"
+
+  package:
+    name: Package ${{ matrix.app }}
+    needs: [discover, lint, typecheck, test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.discover.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: Build deployment package
+        run: uv run scripts/package_app.py ${{ matrix.app }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.app }}
+          path: dist/${{ matrix.app }}.zip
+          retention-days: 7

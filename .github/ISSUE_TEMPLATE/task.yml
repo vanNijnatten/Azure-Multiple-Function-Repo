@@ -12,7 +12,7 @@ body:
     attributes:
       label: Description
       description: What needs to be done?
-      placeholder: 
+      placeholder:
     validations:
       required: true
   - type: textarea
